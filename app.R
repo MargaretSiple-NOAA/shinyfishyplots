@@ -36,7 +36,7 @@ ui <- page_sidebar(
   tabsetPanel(
     tabPanel("Biomass"), # can add plot outputs here!
     tabPanel("Age and length",
-             plotOutput("test")),
+             plotOutput("agelengthPlot", height = "1000px")),
     tabPanel("Maps",
              plotOutput("modelPlot", height = "1200px")),
   )
@@ -55,14 +55,20 @@ server <- function(input, output, session) {
   })
   
   # Length Frequency and Growth plots -- add length-weight here!
-  output$test <- renderPlot({
+  output$agelengthPlot <- renderPlot({
     req(input$species != c("None selected", ""))
+    # Growth plot
     p1 <- plot_growth(all_data, vb_predictions, c("AFSC", "PBS", "NWFSC"), input$species) 
     
+    # Length frequency
     data <- all_data |> filter(common_name == input$species)
     p2 <- length_frequency(data, c("AFSC", "PBS", "NWFSC"), time_series = TRUE)
     
-    p1 + p2 + plot_layout(ncol = 1)
+    # Age frequency
+    p3 <- age_frequency(data, c("AFSC", "PBS", "NWFSC"), species = input$species)
+    
+    # Combine with patchwork
+    p1 + p2 + p3 + plot_layout(ncol = 1)
   })
   
 }
