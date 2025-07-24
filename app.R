@@ -9,13 +9,12 @@ library(dplyr)
 library(patchwork)
 
 # Load data
-data("predictions_afsc", package = "fishyplots")
-data("predictions_nwfsc", package = "fishyplots")
-data("predictions_pbs", package = "fishyplots")
-data("vb_predictions", package = "fishyplots")
-data("nwfsc_bio", package = "fishyplots")
-data("afsc_bio", package = "fishyplots")
-data("pbs_bio", package = "fishyplots")
+data(nwfsc_bio)
+data(afsc_bio)
+data(pbs_bio)
+data(predictions_afsc)
+data(predictions_nwfsc)
+data(predictions_pbs)
 nwfsc_bio <- nwfsc_bio |> select(-otosag_id)
 all_data <- rbind(afsc_bio, nwfsc_bio, pbs_bio)
 
@@ -58,14 +57,13 @@ server <- function(input, output, session) {
   output$agelengthPlot <- renderPlot({
     req(input$species != c("None selected", ""))
     # Growth plot
-    p1 <- plot_growth(all_data, vb_predictions, c("AFSC", "PBS", "NWFSC"), input$species) 
+    p1 <- plot_growth(all_data, vb_predictions, c("AK BSAI", "AK GULF", "PBS", "NWFSC"), input$species) 
     
     # Length frequency
-    data <- all_data |> filter(common_name == input$species)
-    p2 <- length_frequency(data, c("AFSC", "PBS", "NWFSC"), time_series = TRUE)
+    p2 <- length_frequency(all_data, c("AK BSAI", "AK GULF", "PBS", "NWFSC"), input$species, time_series = TRUE)
     
     # Age frequency
-    p3 <- age_frequency(data, c("AFSC", "PBS", "NWFSC"), species = input$species)
+    p3 <- age_frequency(all_data, c("AK BSAI", "AK GULF", "PBS", "NWFSC"), input$species, cutoff = 0.75)
     
     # Combine with patchwork
     p1 + p2 + p3 + plot_layout(ncol = 1)
