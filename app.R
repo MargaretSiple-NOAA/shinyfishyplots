@@ -45,7 +45,7 @@ ui <- page_sidebar(
   title = "Coastwide fishery synopsis",
   sidebar_width = 2,
   sidebar = sidebar(
-    helpText("Plots from NOAA survey data."),
+    helpText("Plots from NOAA and DFO survey data."),
     radioButtons(
       inputId = "region",
       label = "Choose a region",
