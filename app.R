@@ -109,8 +109,14 @@ server <- function(input, output, session) {
       subset = TRUE
     )
     
+    # Survey counts
+    p5 <- survey_table(
+      subset(all_data, survey == region_names()),
+      input$species, form = 2
+    )
+    
     # Combine with patchwork
-    p1 + p2 + p3 + p4 + plot_layout(ncol = 1)
+    p1 + p2 + p3 + p4 + p5 + plot_layout(ncol = 1)
   })
   
 }
