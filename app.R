@@ -68,8 +68,13 @@ ui <- page_sidebar(
     tabPanel("Maps",
              plotOutput("modelPlot", height = "1200px")),
     tabPanel("Data",
+             plotOutput("surveytable"),
              tableOutput("demotable"),
-             downloadButton("downloadbio", "Download biological data"))
+             downloadButton("downloadbio", "Download biological data"),
+             tableOutput("vbtable"),
+             downloadButton("downloadvb", "Download growth predictions"),
+             tableOutput("maptable"),
+             downloadButton("downloadmap", "Download density predictions"))
   )
 )
 
@@ -90,8 +95,15 @@ server <- function(input, output, session) {
     )
   })
   
-  data_subset <- reactive({
+  # Dynamic subsetting for downloading data
+  bio_subset <- reactive({
     subset(all_data, common_name == input$species)
+  })
+  vb_subset <- reactive({
+    subset(vb_predictions, common_name == input$species)
+  })
+  map_subset <- reactive({
+    subset(predictions, species == input$species)
   })
   
   # Map plots
@@ -100,33 +112,19 @@ server <- function(input, output, session) {
     fishmap(predictions, region_names(), input$species)
   })
   
-  # Length, age, growth plots -- add length-weight here!
+  # Length, age, growth plots 
   output$agelengthPlot <- renderPlot({
     req(input$species != c("None selected", ""))
     # Growth plot
     p1 <- plot_growth(all_data, vb_predictions, region_names(), input$species) 
-    
     # Length frequency
-    p2 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
-    
+    p2 <- length_weight(subset(all_data, survey == region_names()), input$species, subset = TRUE)
     # Age frequency
     p3 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
-    
     # Length-weight
-    p4 <- length_weight(
-      subset(all_data, survey == region_names()),
-      input$species,
-      subset = TRUE
-    )
-    
-    # Survey counts
-    p5 <- survey_table(
-      subset(all_data, survey == region_names()),
-      input$species, form = 2
-    )
-    
+    p4 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
     # Combine with patchwork
-    p1 + p2 + p3 + p4 + p5 + plot_layout(ncol = 1)
+    p1 + p2 + p3 + p4 + plot_layout(ncol = 1)
   })
   
   # DBI Biomass plots
@@ -138,21 +136,50 @@ server <- function(input, output, session) {
     # Length frequency
     pdbi2 <- plot_stan_dbi(input$species,region_names())
     
-    
     # Combine with patchwork
     pdbi1 + pdbi2 + plot_layout(ncol = 1)
   })
   
   # Download data tab
+  output$surveytable <- renderPlot({
+    req(input$species != c("None selected", ""))
+    survey_table(subset(all_data, survey == region_names()), input$species, form = 2)
+  })
+  
   output$demotable <- renderTable({
-    head(data_subset())
+    head(bio_subset(), n = 2)
   })
   output$downloadbio <- downloadHandler(
     filename = function() {
       paste0("biodata_", input$species, ".csv")
     },
     content = function(file) {
-      write.csv(data_subset(), file)
+      write.csv(bio_subset(), file)
+    }
+  )
+  
+  output$vbtable <- renderTable({
+    head(vb_subset(), n = 2)
+  })
+  output$downloadvb <- downloadHandler(
+    filename = function() {
+      paste0("growth_predictions_", input$species, ".csv")
+    },
+    content = function(file) {
+      write.csv(vb_subset(), file)
+    }
+  )
+  
+  
+  output$maptable <- renderTable({
+    head(map_subset(), n = 2)
+  })
+  output$downloadmap <- downloadHandler(
+    filename = function() {
+      paste0("density_predictions_", input$species, ".csv")
+    },
+    content = function(file) {
+      write.csv(map_subset(), file)
     }
   )
 }
