@@ -24,6 +24,9 @@ data(predictions_nwfsc)
 data(predictions_pbs)
 predictions <- rbind(predictions_afsc, predictions_pbs, predictions_nwfsc)
 
+#load biomass data
+data("all.dbi")
+
 # Define overlap species
 overlap <- all_data |>
   distinct(common_name, region) |>
@@ -59,7 +62,8 @@ ui <- page_sidebar(
     )
   ),
   tabsetPanel(
-    tabPanel("Biomass"), # can add plot outputs here!
+    tabPanel("Biomass",
+             plotOutput("dbiPlot", height = "1000px")), 
     tabPanel("Age and length",
              plotOutput("agelengthPlot", height = "1000px")),
     tabPanel("Maps",
@@ -119,6 +123,19 @@ server <- function(input, output, session) {
     p1 + p2 + p3 + p4 + p5 + plot_layout(ncol = 1)
   })
   
+  # DBI Biomass plots
+  output$dbiPlot <- renderPlot({
+    req(input$species != c("None selected", ""))
+    # Growth plot
+    pdbi1 <- plot_dbi(input$species,region_names()) 
+    
+    # Length frequency
+    pdbi2 <- plot_stan_dbi(input$species,region_names())
+    
+    
+    # Combine with patchwork
+    pdbi1 + pdbi2 + plot_layout(ncol = 1)
+  })
 }
 
 # Run Shiny app
