@@ -102,8 +102,15 @@ server <- function(input, output, session) {
     # Age frequency
     p3 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
     
+    # Length-weight
+    p4 <- length_weight(
+      subset(all_data, survey == region_names()),
+      input$species,
+      subset = TRUE
+    )
+    
     # Combine with patchwork
-    p1 + p2 + p3 + plot_layout(ncol = 1)
+    p1 + p2 + p3 + p4 + plot_layout(ncol = 1)
   })
   
 }
