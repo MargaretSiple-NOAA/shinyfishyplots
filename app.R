@@ -8,22 +8,21 @@ library(ggplot2)
 library(dplyr)
 library(patchwork)
 
-# Load data
-data(vb_predictions)
+# Load biological data
 data(nwfsc_bio)
 data(afsc_bio)
 data(pbs_bio)
+akbsai <- afsc_bio |> filter(survey == "AK BSAI")
+akgulf <- afsc_bio |> filter(survey == "AK GULF")
+nwfsc_bio <- nwfsc_bio |> select(-otosag_id)
+all_data <- rbind(afsc_bio, nwfsc_bio, pbs_bio)
+
+# Load prediction data
+data(vb_predictions)
 data(predictions_afsc)
 data(predictions_nwfsc)
 data(predictions_pbs)
 predictions <- rbind(predictions_afsc, predictions_pbs, predictions_nwfsc)
-nwfsc_bio <- nwfsc_bio |> select(-otosag_id)
-all_data <- rbind(afsc_bio, nwfsc_bio, pbs_bio)
-
-
-# Making Alaska split data frames
-akbsai <- afsc_bio |> filter(survey == "AK BSAI")
-akgulf <- afsc_bio |> filter(survey == "AK GULF")
 
 # Define overlap species
 overlap <- all_data |>
@@ -31,6 +30,15 @@ overlap <- all_data |>
   count(common_name, name = "n") |>
   filter(n >= 2) |>
   pull(common_name)
+
+# Create species list for each region
+spp_list <- list(
+  "Aleutians/Bering Sea" = sort(unique(akbsai$common_name)),
+  "Gulf of Alaska" = sort(unique(akgulf$common_name)),
+  "US West Coast" = sort(unique(nwfsc_bio$common_name)),
+  "Canada" = sort(unique(pbs_bio$common_name)),
+  "Overlap" = sort(overlap)
+)
 
 # Define User Interface
 ui <- page_sidebar(
@@ -61,21 +69,12 @@ ui <- page_sidebar(
 
 # Define Server
 server <- function(input, output, session) {
+  
   # Dynamic species selection based on region
   region_names <- reactive({
     switch(input$region,
            "US West Coast" = "NWFSC", "Canada" = "PBS", "Aleutians/Bering Sea" = "AK BSAI", "Gulf of Alaska" = "AK GULF", "Overlap" = c("AK BSAI", "AK GULF", "PBS", "NWFSC"))
   })
-  
-  
-  spp_list <- list(
-    "Aleutians/Bering Sea" = unique(akbsai$common_name),
-    "Gulf of Alaska" = unique(akgulf$common_name),
-    "US West Coast" = unique(nwfsc_bio$common_name),
-    "Canada" = unique(pbs_bio$common_name),
-    "Overlap" = overlap
-  )
-  
   observeEvent(input$region, {
     updateSelectInput(
       session,
@@ -91,7 +90,7 @@ server <- function(input, output, session) {
     fishmap(predictions, region_names(), input$species)
   })
   
-  # Length Frequency and Growth plots -- add length-weight here!
+  # Length, age, growth plots -- add length-weight here!
   output$agelengthPlot <- renderPlot({
     req(input$species != c("None selected", ""))
     # Growth plot
