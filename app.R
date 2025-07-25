@@ -14,8 +14,7 @@ data(afsc_bio)
 data(pbs_bio)
 akbsai <- afsc_bio |> filter(survey == "AK BSAI")
 akgulf <- afsc_bio |> filter(survey == "AK GULF")
-nwfsc_bio <- nwfsc_bio |> select(-otosag_id)
-all_data <- rbind(afsc_bio, nwfsc_bio, pbs_bio)
+all_data <- bind_rows(afsc_bio, nwfsc_bio, pbs_bio)
 
 # Load prediction data
 data(vb_predictions)
@@ -68,6 +67,9 @@ ui <- page_sidebar(
              plotOutput("agelengthPlot", height = "1000px")),
     tabPanel("Maps",
              plotOutput("modelPlot", height = "1200px")),
+    tabPanel("Data",
+             tableOutput("demotable"),
+             downloadButton("downloadbio", "Download biological data"))
   )
 )
 
@@ -84,8 +86,12 @@ server <- function(input, output, session) {
       session,
       "species",
       choices = c("None selected", spp_list[[input$region]]),
-      selected = "None selected"
+      #selected = "None selected"
     )
+  })
+  
+  data_subset <- reactive({
+    subset(all_data, common_name == input$species)
   })
   
   # Map plots
@@ -136,6 +142,19 @@ server <- function(input, output, session) {
     # Combine with patchwork
     pdbi1 + pdbi2 + plot_layout(ncol = 1)
   })
+  
+  # Download data tab
+  output$demotable <- renderTable({
+    head(data_subset())
+  })
+  output$downloadbio <- downloadHandler(
+    filename = function() {
+      paste0("biodata_", input$species, ".csv")
+    },
+    content = function(file) {
+      write.csv(data_subset(), file)
+    }
+  )
 }
 
 # Run Shiny app
