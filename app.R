@@ -9,6 +9,7 @@ library(dplyr)
 library(patchwork)
 
 # Load data
+data(vb_predictions)
 data(nwfsc_bio)
 data(afsc_bio)
 data(pbs_bio)
@@ -18,6 +19,7 @@ data(predictions_pbs)
 predictions <- rbind(predictions_afsc, predictions_pbs, predictions_nwfsc)
 nwfsc_bio <- nwfsc_bio |> select(-otosag_id)
 all_data <- rbind(afsc_bio, nwfsc_bio, pbs_bio)
+
 
 # Making Alaska split data frames
 akbsai <- afsc_bio |> filter(survey == "AK BSAI")
