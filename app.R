@@ -15,6 +15,7 @@ data(pbs_bio)
 data(predictions_afsc)
 data(predictions_nwfsc)
 data(predictions_pbs)
+predictions <- rbind(predictions_afsc, predictions_pbs, predictions_nwfsc)
 nwfsc_bio <- nwfsc_bio |> select(-otosag_id)
 all_data <- rbind(afsc_bio, nwfsc_bio, pbs_bio)
 
@@ -31,7 +32,7 @@ overlap <- all_data |>
 
 # Define User Interface
 ui <- page_sidebar(
-  title = "fishyplots",
+  title = "Coastwide fishery synopsis",
   sidebar_width = 2,
   sidebar = sidebar(
     helpText("Plots from NOAA survey data."),
@@ -64,6 +65,7 @@ server <- function(input, output, session) {
            "US West Coast" = "NWFSC", "Canada" = "PBS", "Aleutians/Bering Sea" = "AK BSAI", "Gulf of Alaska" = "AK GULF", "Overlap" = c("AK BSAI", "AK GULF", "PBS", "NWFSC"))
   })
   
+  
   spp_list <- list(
     "Aleutians/Bering Sea" = unique(akbsai$common_name),
     "Gulf of Alaska" = unique(akgulf$common_name),
@@ -84,10 +86,7 @@ server <- function(input, output, session) {
   # Map plots
   output$modelPlot <- renderPlot({
     req(input$species != "None selected")
-    p1 <- fishmap(predictions_afsc, input$species)
-    p2 <- fishmap(predictions_pbs, input$species)
-    p3 <- fishmap(predictions_nwfsc, input$species)
-    p1 + p2 + p3 + plot_layout(ncol = 1)
+    fishmap(predictions, region_names(), input$species)
   })
   
   # Length Frequency and Growth plots -- add length-weight here!
