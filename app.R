@@ -79,6 +79,8 @@ ui <- page_sidebar(
              plotOutput("agelengthPlot", height = "1000px")),
     tabPanel("Maps",
              plotOutput("modelPlot", height = "1200px")),
+    tabPanel("Depth",
+             plotOutput("depthPlot")),
     tabPanel("Data",
              div(style = "overflow-x: scroll; min-width: 1200px;",
                  plotOutput("surveytable")),
@@ -148,6 +150,12 @@ server <- function(input, output, session) {
     p4 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
     # Combine with patchwork
     p1 + p2 + p3 + p4 + plot_layout(ncol = 1)
+  })
+  
+  # Depth plots
+  output$depthPlot <- renderPlot({
+    req(input$species != "None selected")
+    depth_plot(all_data, region_names(), input$species)
   })
   
   # DBI Biomass plots
