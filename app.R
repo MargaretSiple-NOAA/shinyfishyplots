@@ -41,7 +41,7 @@ spp_list <- list(
   "Gulf of Alaska" = sort(unique(akgulf$common_name)),
   "US West Coast" = sort(unique(nwfsc_bio$common_name)),
   "Canada" = sort(unique(pbs_bio$common_name)),
-  "Overlap" = sort(overlap)
+  "All regions" = sort(overlap)
 )
 
 #### Define User Interface ####
@@ -53,11 +53,11 @@ ui <- page_sidebar(
     radioButtons(
       inputId = "region",
       label = "Choose a region",
-      choices = list("Aleutians/Bering Sea", "Gulf of Alaska", "Canada", "US West Coast", "Overlap"),
-      selected = character(0)
+      choices = list("All regions", "Aleutians/Bering Sea", "Gulf of Alaska", "Canada", "US West Coast"),
+      selected = "All regions"
     ),
-    conditionalPanel( # show when Overlap is selected for biomass plots
-      condition = "input.region == 'Overlap' && input.tabs == 'Biomass'",
+    conditionalPanel( # show when All regions is selected for biomass plots
+      condition = "input.region == 'All regions' && input.tabs == 'Biomass'",
       checkboxGroupInput(
         inputId = "surveys_selected",
         label = "Select surveys (Biomass only)",
@@ -76,7 +76,8 @@ ui <- page_sidebar(
     tabPanel("Biomass",
              uiOutput("dbiPlotUI")), #dynamic height
     tabPanel("Age and length",
-             plotOutput("agelengthPlot", height = "1000px")),
+             #plotOutput("agelengthPlot", height = "1000px")),
+             uiOutput("dynamic_agelength")),
     tabPanel("Maps",
              plotOutput("modelPlot", height = "1200px")),
     tabPanel("Depth",
@@ -103,32 +104,35 @@ server <- function(input, output, session) {
   # Dynamic species selection based on region
   region_names <- reactive({
     switch(input$region,
-           "US West Coast" = "NWFSC", "Canada" = "PBS", "Aleutians/Bering Sea" = "AK BSAI", "Gulf of Alaska" = "AK GULF", "Overlap" = c("AK BSAI", "AK GULF", "PBS", "NWFSC"))
+           "US West Coast" = "NWFSC", "Canada" = "PBS", "Aleutians/Bering Sea" = "AK BSAI", "Gulf of Alaska" = "AK GULF", "All regions" = c("AK BSAI", "AK GULF", "PBS", "NWFSC"))
   })
   observeEvent(input$region, {
     updateSelectInput(
       session,
       "species",
-      choices = c("None selected", spp_list[[input$region]]),
-      #selected = "None selected"
+      choices = c("None selected", spp_list[[input$region]])
+      #selected = "Arrowtooth flounder"
     )
   })
+
   
   # Dynamic subsetting for downloading data
   bio_subset <- reactive({
-    subset(all_data, common_name == input$species)
+    all_data <- all_data |> select(-otosag_id)
+    subset(all_data, common_name == input$species & survey %in% region_names())
   })
   vb_subset <- reactive({
-    subset(vb_predictions, common_name == input$species)
+    subset(vb_predictions, common_name == input$species & survey %in% region_names())
   })
   map_subset <- reactive({
-    subset(predictions, species == input$species)
+    i <- predictions |> select(-sanity)
+    subset(i, species == input$species & region %in% region_names())
   })
   lw_subset <- reactive({
     subset(lw_predictions, common == input$species)
   })
   dbi_subset <- reactive({
-    subset(all.dbi, common_name == input$species)
+    subset(all.dbi, common_name == input$species & survey %in% region_names())
   })
   
   # Map plots
@@ -138,12 +142,17 @@ server <- function(input, output, session) {
   })
   
   # Length, age, growth plots 
+  output$dynamic_agelength <- renderUI({
+    width <- if (region_names() == "All regions") "100%" else "80%"
+    plotOutput("agelengthPlot", width = width, height = "1000px")
+  })
+  
   output$agelengthPlot <- renderPlot({
     req(input$species != c("None selected", ""))
     # Growth plot
     p1 <- plot_growth(all_data, vb_predictions, region_names(), input$species) 
     # Length - weight
-    p2 <- length_weight(subset(all_data, survey == region_names()), input$species, subset = TRUE)
+    p2 <- length_weight(subset(all_data, survey %in% region_names()), input$species, subset = TRUE)
     # Age frequency
     p3 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
     # Llength frequency
@@ -151,6 +160,8 @@ server <- function(input, output, session) {
     # Combine with patchwork
     p1 + p2 + p3 + p4 + plot_layout(ncol = 1)
   })
+  
+  
   
   # Depth plots
   output$depthPlot <- renderPlot({
@@ -160,8 +171,8 @@ server <- function(input, output, session) {
   
   # DBI Biomass plots
   output$dbiPlotUI <- renderUI({
-    if (input$region == "Overlap") {
-      plotOutput("dbiPlot", height = "500px")  # smaller for overlap, only one plot
+    if (input$region == "All regions") {
+      plotOutput("dbiPlot", height = "500px")  # smaller for All regions, only one plot
     } else {
       plotOutput("dbiPlot", height = "900px")  # larger for stacked plots
     }
@@ -169,10 +180,10 @@ server <- function(input, output, session) {
   
   output$dbiPlot <- renderPlot({
     req(input$species != c("None selected", ""))
-  if (input$region == "Overlap") {
+  if (input$region == "All regions") {
     req(input$surveys_selected)
   
-    plot_stan_dbi(input$species, input$surveys_selected) # show only standardized plot if overlap selected
+    plot_stan_dbi(input$species, input$surveys_selected) # show only standardized plot if All regions selected
     
   } else {
     # show normal and standardized
@@ -183,13 +194,14 @@ server <- function(input, output, session) {
 })
   
   # Download data tab
+  # Survey table
   output$surveytable <- renderPlot({
     req(input$species != c("None selected", ""))
     survey_table(subset(all_data, survey == region_names()), input$species, form = 2)
   }, height = function() {
     200 * length(region_names()) #dynamically change plot size based on amount
   })
-
+  # Download biological data
   output$demotable <- renderTable({
     head(bio_subset(), n = 2)
   })
@@ -201,7 +213,7 @@ server <- function(input, output, session) {
       write.csv(bio_subset(), file)
     }
   )
-  
+  # Download growth predictions
   output$vbtable <- renderTable({
     head(vb_subset(), n = 2)
   })
@@ -214,8 +226,9 @@ server <- function(input, output, session) {
     }
   )
   
-  
+  # Download map predictions
   output$maptable <- renderTable({
+    map_subset() <- map_subset() |> select(-sanity)
     head(map_subset(), n = 2)
   })
   output$downloadmap <- downloadHandler(
@@ -227,6 +240,7 @@ server <- function(input, output, session) {
     }
   )
   
+  # Download LW predictions
   output$lwtable <- renderTable({
     head(lw_subset(), n = 2)
   })
@@ -239,6 +253,7 @@ server <- function(input, output, session) {
     }
   )
   
+  # Download DBI 
   output$dbitable <- renderTable({
     head(dbi_subset(), n = 2)
   })
