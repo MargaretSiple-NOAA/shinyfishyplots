@@ -8,6 +8,8 @@ library(ggplot2)
 library(dplyr)
 library(patchwork)
 
+#### Data ####
+
 # Load biological data
 data(nwfsc_bio)
 data(afsc_bio)
@@ -42,7 +44,7 @@ spp_list <- list(
   "Overlap" = sort(overlap)
 )
 
-# Define User Interface
+#### Define User Interface ####
 ui <- page_sidebar(
   title = "Coastwide fishery synopsis",
   sidebar_width = 2,
@@ -54,6 +56,15 @@ ui <- page_sidebar(
       choices = list("Aleutians/Bering Sea", "Gulf of Alaska", "Canada", "US West Coast", "Overlap"),
       selected = character(0)
     ),
+    conditionalPanel( # show when Overlap is selected for biomass plots
+      condition = "input.region == 'Overlap' && input.tabs == 'Biomass'",
+      checkboxGroupInput(
+        inputId = "surveys_selected",
+        label = "Select surveys (Biomass only)",
+        choices = c("U.S. West Coast", "SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI", "Gulf of Alaska" = "U.S. Gulf of Alaska", "Aleutian Islands" = "U.S. Aleutian Islands", "Eastern Bering Slope" = "U.S. Eastern Bering Sea Slope", "Eastern Bering and NW" = "U.S. Eastern Bering Sea Standard Plus NW Region", "Northern Bering" = "U.S. Northern Bering Sea")
+      )
+    ),
+    
     selectInput(
       "species",
       label = "Choose a species",
@@ -61,24 +72,30 @@ ui <- page_sidebar(
     )
   ),
   tabsetPanel(
+    id = "tabs",
     tabPanel("Biomass",
-             plotOutput("dbiPlot", height = "1000px")), 
+             uiOutput("dbiPlotUI")), #dynamic height
     tabPanel("Age and length",
              plotOutput("agelengthPlot", height = "1000px")),
     tabPanel("Maps",
              plotOutput("modelPlot", height = "1200px")),
     tabPanel("Data",
-             plotOutput("surveytable"),
+             div(style = "overflow-x: scroll; min-width: 1200px;",
+                 plotOutput("surveytable")),
              tableOutput("demotable"),
              downloadButton("downloadbio", "Download biological data"),
              tableOutput("vbtable"),
              downloadButton("downloadvb", "Download growth predictions"),
+             tableOutput("lwtable"),
+             downloadButton("downloadlw", "Download length-weight predictions"),
              tableOutput("maptable"),
-             downloadButton("downloadmap", "Download density predictions"))
+             downloadButton("downloadmap", "Download density predictions"),
+             tableOutput("dbitable"),
+             downloadButton("downloaddbi", "Download design-based biomass indicies"))
   )
 )
 
-# Define Server
+#### Define Server ####
 server <- function(input, output, session) {
   
   # Dynamic species selection based on region
@@ -105,6 +122,12 @@ server <- function(input, output, session) {
   map_subset <- reactive({
     subset(predictions, species == input$species)
   })
+  lw_subset <- reactive({
+    subset(lw_predictions, common == input$species)
+  })
+  dbi_subset <- reactive({
+    subset(all.dbi, common_name == input$species)
+  })
   
   # Map plots
   output$modelPlot <- renderPlot({
@@ -117,35 +140,48 @@ server <- function(input, output, session) {
     req(input$species != c("None selected", ""))
     # Growth plot
     p1 <- plot_growth(all_data, vb_predictions, region_names(), input$species) 
-    # Length frequency
+    # Length - weight
     p2 <- length_weight(subset(all_data, survey == region_names()), input$species, subset = TRUE)
     # Age frequency
     p3 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
-    # Length-weight
+    # Llength frequency
     p4 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
     # Combine with patchwork
     p1 + p2 + p3 + p4 + plot_layout(ncol = 1)
   })
   
   # DBI Biomass plots
+  output$dbiPlotUI <- renderUI({
+    if (input$region == "Overlap") {
+      plotOutput("dbiPlot", height = "500px")  # smaller for overlap, only one plot
+    } else {
+      plotOutput("dbiPlot", height = "900px")  # larger for stacked plots
+    }
+  })
+  
   output$dbiPlot <- renderPlot({
     req(input$species != c("None selected", ""))
-    # Growth plot
-    pdbi1 <- plot_dbi(input$species,region_names()) 
+  if (input$region == "Overlap") {
+    req(input$surveys_selected)
+  
+    plot_stan_dbi(input$species, input$surveys_selected) # show only standardized plot if overlap selected
     
-    # Length frequency
-    pdbi2 <- plot_stan_dbi(input$species,region_names())
-    
-    # Combine with patchwork
+  } else {
+    # show normal and standardized
+    pdbi1 <- plot_dbi(input$species, region_names())
+    pdbi2 <- plot_stan_dbi(input$species, region_names())
     pdbi1 + pdbi2 + plot_layout(ncol = 1)
-  })
+  }
+})
   
   # Download data tab
   output$surveytable <- renderPlot({
     req(input$species != c("None selected", ""))
     survey_table(subset(all_data, survey == region_names()), input$species, form = 2)
+  }, height = function() {
+    200 * length(region_names()) #dynamically change plot size based on amount
   })
-  
+
   output$demotable <- renderTable({
     head(bio_subset(), n = 2)
   })
@@ -182,7 +218,31 @@ server <- function(input, output, session) {
       write.csv(map_subset(), file)
     }
   )
+  
+  output$lwtable <- renderTable({
+    head(lw_subset(), n = 2)
+  })
+  output$downloadlw <- downloadHandler(
+    filename = function() {
+      paste0("length_weight_predictions_", input$species, ".csv")
+    },
+    content = function(file) {
+      write.csv(lw_subset(), file)
+    }
+  )
+  
+  output$dbitable <- renderTable({
+    head(dbi_subset(), n = 2)
+  })
+  output$downloaddbi <- downloadHandler(
+    filename = function() {
+      paste0("design_biomass_index_", input$species, ".csv")
+    },
+    content = function(file) {
+      write.csv(dbi_subset(), file)
+    }
+  )
 }
 
-# Run Shiny app
+#### Run Shiny app ####
 shinyApp(ui = ui, server = server)
