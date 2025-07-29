@@ -56,6 +56,15 @@ ui <- page_sidebar(
       choices = list("Aleutians/Bering Sea", "Gulf of Alaska", "Canada", "US West Coast", "Overlap"),
       selected = character(0)
     ),
+    conditionalPanel( # show when Overlap is selected for biomass plots
+      condition = "input.region == 'Overlap' && input.tabs == 'Biomass'",
+      checkboxGroupInput(
+        inputId = "surveys_selected",
+        label = "Select surveys (Biomass only)",
+        choices = c("U.S. West Coast", "SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI", "Gulf of Alaska" = "U.S. Gulf of Alaska", "Aleutian Islands" = "U.S. Aleutian Islands", "Eastern Bering Slope" = "U.S. Eastern Bering Sea Slope", "Eastern Bering and NW" = "U.S. Eastern Bering Sea Standard Plus NW Region", "Northern Bering" = "U.S. Northern Bering Sea")
+      )
+    ),
+    
     selectInput(
       "species",
       label = "Choose a species",
@@ -63,8 +72,9 @@ ui <- page_sidebar(
     )
   ),
   tabsetPanel(
+    id = "tabs",
     tabPanel("Biomass",
-             plotOutput("dbiPlot", height = "1000px")), 
+             uiOutput("dbiPlotUI")), #dynamic height
     tabPanel("Age and length",
              plotOutput("agelengthPlot", height = "1000px")),
     tabPanel("Maps",
@@ -130,28 +140,39 @@ server <- function(input, output, session) {
     req(input$species != c("None selected", ""))
     # Growth plot
     p1 <- plot_growth(all_data, vb_predictions, region_names(), input$species) 
-    # Length frequency
+    # Length - weight
     p2 <- length_weight(subset(all_data, survey == region_names()), input$species, subset = TRUE)
     # Age frequency
     p3 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
-    # Length-weight
+    # Llength frequency
     p4 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
     # Combine with patchwork
     p1 + p2 + p3 + p4 + plot_layout(ncol = 1)
   })
   
   # DBI Biomass plots
+  output$dbiPlotUI <- renderUI({
+    if (input$region == "Overlap") {
+      plotOutput("dbiPlot", height = "500px")  # smaller for overlap, only one plot
+    } else {
+      plotOutput("dbiPlot", height = "900px")  # larger for stacked plots
+    }
+  })
+  
   output$dbiPlot <- renderPlot({
     req(input$species != c("None selected", ""))
-    # Growth plot
-    pdbi1 <- plot_dbi(input$species,region_names()) 
+  if (input$region == "Overlap") {
+    req(input$surveys_selected)
+  
+    plot_stan_dbi(input$species, input$surveys_selected) # show only standardized plot if overlap selected
     
-    # Length frequency
-    pdbi2 <- plot_stan_dbi(input$species,region_names())
-    
-    # Combine with patchwork
+  } else {
+    # show normal and standardized
+    pdbi1 <- plot_dbi(input$species, region_names())
+    pdbi2 <- plot_stan_dbi(input$species, region_names())
     pdbi1 + pdbi2 + plot_layout(ncol = 1)
-  })
+  }
+})
   
   # Download data tab
   output$surveytable <- renderPlot({
