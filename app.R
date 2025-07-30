@@ -28,7 +28,7 @@ predictions <- predictions |>
   mutate(subregion = case_when(
     region == "NWFSC" ~ "NWFSC",
     region == "PBS" ~ "PBS",
-    survey == "Gulf of Alaska Bottom Trawl Survey" ~ "AK GULF",
+    region == "Gulf of Alaska Bottom Trawl Survey" ~ "AK GULF",
     TRUE ~ "AK BSAI"
   ))
 
