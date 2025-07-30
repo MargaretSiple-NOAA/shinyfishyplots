@@ -23,7 +23,14 @@ data(vb_predictions)
 data(predictions_afsc)
 data(predictions_nwfsc)
 data(predictions_pbs)
-predictions <- rbind(predictions_afsc, predictions_pbs, predictions_nwfsc)
+predictions <- bind_rows(predictions_afsc, predictions_pbs, predictions_nwfsc)
+predictions <- predictions |>
+  mutate(subregion = case_when(
+    region == "NWFSC" ~ "NWFSC",
+    region == "PBS" ~ "PBS",
+    survey == "Gulf of Alaska Bottom Trawl Survey" ~ "AK GULF",
+    TRUE ~ "AK BSAI"
+  ))
 
 #load biomass data
 data("all.dbi")
@@ -125,11 +132,11 @@ server <- function(input, output, session) {
     subset(vb_predictions, common_name == input$species & survey %in% region_names())
   })
   map_subset <- reactive({
-    i <- predictions |> select(-sanity)
-    subset(i, species == input$species & region %in% region_names())
+    predictions <- predictions |> select(-sanity) |> select(-survey)
+    subset(predictions, species == input$species & subregion %in% region_names())
   })
   lw_subset <- reactive({
-    subset(lw_predictions, common == input$species)
+    subset(lw_predictions, common == input$species & survey %in% region_names())
   })
   dbi_subset <- reactive({
     subset(all.dbi, common_name == input$species & survey %in% region_names())
@@ -228,7 +235,7 @@ server <- function(input, output, session) {
   
   # Download map predictions
   output$maptable <- renderTable({
-    map_subset() <- map_subset() |> select(-sanity)
+    #map_subset() <- map_subset() |> select(-sanity)
     head(map_subset(), n = 2)
   })
   output$downloadmap <- downloadHandler(
