@@ -3,7 +3,7 @@ library(shiny)
 library(bslib)
 library(surveyjoin)
 library(sdmTMB)
-library(fishyplots)
+library(fishyplots) #devtools::install_github("DFO-NOAA-Pacific/fishyplots")
 library(ggplot2)
 library(dplyr)
 library(patchwork)
@@ -28,7 +28,7 @@ predictions <- predictions |>
   mutate(subregion = case_when(
     region == "NWFSC" ~ "NWFSC",
     region == "PBS" ~ "PBS",
-    survey == "Gulf of Alaska Bottom Trawl Survey" ~ "AK GULF",
+    region == "Gulf of Alaska Bottom Trawl Survey" ~ "AK GULF",
     TRUE ~ "AK BSAI"
   ))
 
@@ -113,13 +113,25 @@ server <- function(input, output, session) {
     switch(input$region,
            "US West Coast" = "NWFSC", "Canada" = "PBS", "Aleutians/Bering Sea" = "AK BSAI", "Gulf of Alaska" = "AK GULF", "All regions" = c("AK BSAI", "AK GULF", "PBS", "NWFSC"))
   })
+  
   observeEvent(input$region, {
-    updateSelectInput(
-      session,
-      "species",
-      choices = c("None selected", spp_list[[input$region]])
-      #selected = "Arrowtooth flounder"
-    )
+  region_species <- spp_list[[input$region]]
+
+  # Check if currently selected species is also present in the newly selected region:
+  current_spp <- input$species
+
+  if (!is.null(current_spp) && current_spp %in% region_species) {
+    selected_species <- current_spp
+  } else {
+    selected_species <- "None selected"
+  }
+
+  updateSelectInput(
+    session,
+    "species",
+    choices = c("None selected", region_species),
+    selected = selected_species
+  )
   })
 
   
