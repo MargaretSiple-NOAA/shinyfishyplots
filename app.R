@@ -121,7 +121,6 @@ server <- function(input, output, session) {
       #selected = "Arrowtooth flounder"
     )
   })
-
   
   # Dynamic subsetting for downloading data
   bio_subset <- reactive({
@@ -150,7 +149,7 @@ server <- function(input, output, session) {
   
   # Length, age, growth plots 
   output$dynamic_agelength <- renderUI({
-    width <- if (region_names() == "All regions") "100%" else "80%"
+    width <- if (identical(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) "110%" else "80%"
     plotOutput("agelengthPlot", width = width, height = "1000px")
   })
   
