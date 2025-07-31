@@ -32,7 +32,7 @@ predictions <- predictions |>
     TRUE ~ "AK BSAI"
   ))
 
-#load biomass data
+# Load biomass data
 data("all.dbi")
 
 # Define overlap species
@@ -164,9 +164,17 @@ server <- function(input, output, session) {
     req(input$species != "None selected")
     fishmap(predictions, region_names(), input$species)})
   
+  map_height <- reactive({
+    if (setequal(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) {
+      1600 / 96
+    } else {
+      800 / 96
+    }
+  })
+  
   output$downloadMapPlot <- downloadHandler(
     filename = function() {paste0("map_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = fishmap(predictions, region_names(), input$species), device = "png")})
+    content = function(file) {ggsave(file, plot = fishmap(predictions, region_names(), input$species), height = map_height(), device = "png")})
   
   # Length, age, growth plots 
   output$dynamic_agelength <- renderUI({
@@ -187,21 +195,29 @@ server <- function(input, output, session) {
     p1 + p2 + p3 + p4 + plot_layout(ncol = 1, heights = c(1, 1, 1.5, 1))
   })
   
+  plot_width <- reactive({
+    if (setequal(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) {
+      1200 / 96
+    } else {
+      800 / 96
+    }
+  })
+  
   output$downloadGrowth <- downloadHandler(
     filename = function() {paste0("growth_plot_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = plot_growth(all_data, vb_predictions, region_names(), input$species), device = "png")})
+    content = function(file) {ggsave(file, plot = plot_growth(all_data, vb_predictions, region_names(), input$species), width = plot_width(), device = "png")})
   
   output$downloadLW <- downloadHandler(
     filename = function() {paste0("lw_plot_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = length_weight(subset(all_data, survey %in% region_names()), input$species, subset = TRUE), device = "png")})
+    content = function(file) {ggsave(file, plot = length_weight(subset(all_data, survey %in% region_names()), input$species, subset = TRUE), width = plot_width(), device = "png")})
   
   output$downloadAgeFreq <- downloadHandler(
     filename = function() {paste0("agefrequency_plot_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = age_frequency(all_data, region_names(), input$species, cutoff = 0.75), device = "png")})
+    content = function(file) {ggsave(file, plot = age_frequency(all_data, region_names(), input$species, cutoff = 0.75), width = plot_width(), device = "png")})
   
   output$downloadLengthFreq <- downloadHandler(
     filename = function() {paste0("lengthfrequency_plot_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = length_frequency(all_data, region_names(), input$species, time_series = TRUE), device = "png")})
+    content = function(file) {ggsave(file, plot = length_frequency(all_data, region_names(), input$species, time_series = TRUE), width = plot_width(), device = "png")})
   
   # Depth plot
   output$depthPlot <- renderPlot({
@@ -210,7 +226,7 @@ server <- function(input, output, session) {
   
   output$downloadDepthPlot <- downloadHandler(
     filename = function() {paste0("depth_plot_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = depth_plot(all_data, region_names(), input$species), device = "png")})
+    content = function(file) {ggsave(file, plot = depth_plot(all_data, region_names(), input$species), width = plot_width(), device = "png")})
   
   # DBI Biomass plots
   output$dbiPlotUI <- renderUI({
