@@ -184,7 +184,7 @@ server <- function(input, output, session) {
     # Length frequency
     p4 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
     # Combine with patchwork
-    p1 + p2 + p3 + p4 + plot_layout(ncol = 1)
+    p1 + p2 + p3 + p4 + plot_layout(ncol = 1, heights = c(1, 1, 1.5, 1))
   })
   
   output$downloadGrowth <- downloadHandler(
