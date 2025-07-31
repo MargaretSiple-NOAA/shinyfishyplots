@@ -139,7 +139,7 @@ server <- function(input, output, session) {
     subset(lw_predictions, common == input$species & survey %in% region_names())
   })
   dbi_subset <- reactive({
-    subset(all.dbi, common_name == input$species & survey %in% region_names())
+    subset(all.dbi, common_name == input$species & survey_group %in% region_names())
   })
   
   # Map plots
