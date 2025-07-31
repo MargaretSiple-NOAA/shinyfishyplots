@@ -84,11 +84,17 @@ ui <- page_sidebar(
              uiOutput("dbiPlotUI")), #dynamic height
     tabPanel("Age and length",
              #plotOutput("agelengthPlot", height = "1000px")),
-             uiOutput("dynamic_agelength")),
+             uiOutput("dynamic_agelength"),
+             downloadButton("downloadGrowth", "Download growth plot"),
+             downloadButton("downloadLW", "Download length-weight plot"),
+             downloadButton("downloadAgeFreq", "Download age frequency plot"),
+             downloadButton("downloadLengthFreq", "Download length frequency plot")),
     tabPanel("Maps",
-             plotOutput("modelPlot", height = "1200px")),
+             plotOutput("modelPlot", height = "1200px"),
+             downloadButton("downloadMapPlot", "Download map")),
     tabPanel("Depth",
-             plotOutput("depthPlot")),
+             plotOutput("depthPlot"),
+             downloadButton("downloadDepthPlot", "Download depth plot")),
     tabPanel("Data",
              div(style = "overflow-x: scroll; min-width: 1200px;",
                  plotOutput("surveytable")),
@@ -133,7 +139,6 @@ server <- function(input, output, session) {
     selected = selected_species
   )
   })
-
   
   # Dynamic subsetting for downloading data
   bio_subset <- reactive({
@@ -157,14 +162,16 @@ server <- function(input, output, session) {
   # Map plots
   output$modelPlot <- renderPlot({
     req(input$species != "None selected")
-    fishmap(predictions, region_names(), input$species)
-  })
+    fishmap(predictions, region_names(), input$species)})
+  
+  output$downloadMapPlot <- downloadHandler(
+    filename = function() {paste0("map_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = fishmap(predictions, region_names(), input$species), device = "png")})
   
   # Length, age, growth plots 
   output$dynamic_agelength <- renderUI({
-    width <- if (region_names() == "All regions") "100%" else "80%"
-    plotOutput("agelengthPlot", width = width, height = "1000px")
-  })
+    width <- if (identical(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) "100%" else "80%"
+    plotOutput("agelengthPlot", width = width, height = "1000px")})
   
   output$agelengthPlot <- renderPlot({
     req(input$species != c("None selected", ""))
@@ -174,19 +181,36 @@ server <- function(input, output, session) {
     p2 <- length_weight(subset(all_data, survey %in% region_names()), input$species, subset = TRUE)
     # Age frequency
     p3 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
-    # Llength frequency
+    # Length frequency
     p4 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
     # Combine with patchwork
     p1 + p2 + p3 + p4 + plot_layout(ncol = 1)
   })
   
+  output$downloadGrowth <- downloadHandler(
+    filename = function() {paste0("growth_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = plot_growth(all_data, vb_predictions, region_names(), input$species), device = "png")})
   
+  output$downloadLW <- downloadHandler(
+    filename = function() {paste0("lw_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = length_weight(subset(all_data, survey %in% region_names()), input$species, subset = TRUE), device = "png")})
   
-  # Depth plots
+  output$downloadAgeFreq <- downloadHandler(
+    filename = function() {paste0("agefrequency_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = age_frequency(all_data, region_names(), input$species, cutoff = 0.75), device = "png")})
+  
+  output$downloadLengthFreq <- downloadHandler(
+    filename = function() {paste0("lengthfrequency_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = length_frequency(all_data, region_names(), input$species, time_series = TRUE), device = "png")})
+  
+  # Depth plot
   output$depthPlot <- renderPlot({
     req(input$species != "None selected")
-    depth_plot(all_data, region_names(), input$species)
-  })
+    depth_plot(all_data, region_names(), input$species)})
+  
+  output$downloadDepthPlot <- downloadHandler(
+    filename = function() {paste0("depth_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = depth_plot(all_data, region_names(), input$species), device = "png")})
   
   # DBI Biomass plots
   output$dbiPlotUI <- renderUI({
@@ -220,70 +244,43 @@ server <- function(input, output, session) {
   }, height = function() {
     200 * length(region_names()) #dynamically change plot size based on amount
   })
+  
   # Download biological data
   output$demotable <- renderTable({
-    head(bio_subset(), n = 2)
-  })
+    head(bio_subset(), n = 2)})
   output$downloadbio <- downloadHandler(
-    filename = function() {
-      paste0("biodata_", input$species, ".csv")
-    },
-    content = function(file) {
-      write.csv(bio_subset(), file)
-    }
-  )
+    filename = function() {paste0("biodata_", input$species, ".csv")},
+    content = function(file) {write.csv(bio_subset(), file)})
+  
   # Download growth predictions
   output$vbtable <- renderTable({
-    head(vb_subset(), n = 2)
-  })
+    head(vb_subset(), n = 2)})
   output$downloadvb <- downloadHandler(
-    filename = function() {
-      paste0("growth_predictions_", input$species, ".csv")
-    },
-    content = function(file) {
-      write.csv(vb_subset(), file)
-    }
-  )
+    filename = function() {paste0("growth_predictions_", input$species, ".csv")},
+    content = function(file) {write.csv(vb_subset(), file)})
   
   # Download map predictions
   output$maptable <- renderTable({
     #map_subset() <- map_subset() |> select(-sanity)
-    head(map_subset(), n = 2)
-  })
+    head(map_subset(), n = 2)})
   output$downloadmap <- downloadHandler(
-    filename = function() {
-      paste0("density_predictions_", input$species, ".csv")
-    },
-    content = function(file) {
-      write.csv(map_subset(), file)
-    }
-  )
+    filename = function() {paste0("density_predictions_", input$species, ".csv")},
+    content = function(file) {write.csv(map_subset(), file)})
   
   # Download LW predictions
   output$lwtable <- renderTable({
-    head(lw_subset(), n = 2)
-  })
+    head(lw_subset(), n = 2)})
   output$downloadlw <- downloadHandler(
-    filename = function() {
-      paste0("length_weight_predictions_", input$species, ".csv")
-    },
-    content = function(file) {
-      write.csv(lw_subset(), file)
-    }
-  )
+    filename = function() {paste0("length_weight_predictions_", input$species, ".csv")},
+    content = function(file) {write.csv(lw_subset(), file)})
   
   # Download DBI 
   output$dbitable <- renderTable({
-    head(dbi_subset(), n = 2)
-  })
+    head(dbi_subset(), n = 2)})
   output$downloaddbi <- downloadHandler(
-    filename = function() {
-      paste0("design_biomass_index_", input$species, ".csv")
-    },
-    content = function(file) {
-      write.csv(dbi_subset(), file)
-    }
-  )
+    filename = function() {paste0("design_biomass_index_", input$species, ".csv")},
+    content = function(file) {write.csv(dbi_subset(), file)})
+  
 }
 
 #### Run Shiny app ####
