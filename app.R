@@ -238,11 +238,35 @@ server <- function(input, output, session) {
   })
   
   output$dbiPlot <- renderPlot({
-    req(input$species != c("None selected", ""))
+    validate(
+      need(input$species != "" && input$species != "None selected", "Please select a species"))
+   
+    
+     
   if (input$region == "All regions") {
     req(input$surveys_selected)
   
-    plot_stan_dbi(input$species, input$surveys_selected) # show only standardized plot if All regions selected
+    #create message if there is no DBI data for all selected surveys
+    valid_dbi_surveys <- all.dbi %>% 
+      filter(common_name == input$species, survey %in% input$surveys_selected)
+    valid_dbi_surveys <-  unique(valid_dbi_surveys$survey)
+    invalid_dbi_surveys <- setdiff(input$surveys_selected, valid_dbi_surveys)
+    
+    validate(
+      need(length(valid_dbi_surveys) > 0,
+           paste("No data for", input$species, "in selected surveys"))
+    )
+    
+    # Show a warning notif if some of selected surveys have no data
+    if (length(invalid_dbi_surveys) > 0) {
+      showNotification(
+        paste("No data for", input$species, "in:", paste(invalid_dbi_surveys, collapse = ", ")),
+        type = "warning"
+      )
+    }
+    
+    plot_stan_dbi(input$species, valid_dbi_surveys) # show only standardized plot if All regions selected
+    
     
   } else {
     # show normal and standardized
