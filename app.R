@@ -102,7 +102,32 @@ ui <- page_sidebar(
                     " and builds off an ",
                     tags$a(href = "https://github.com/DFO-NOAA-Pacific/gfsynopsis-noaa", "initial version", target = "_self"),
                     " from summer 2024.")
-                  ))),
+                  )),
+             card(
+               full_screen = FALSE,
+               card_header("Survey Key"),
+               card_body(
+                 tags$div(
+                   tags$strong("Aleutians/Bering Sea (AFSC):"), tags$br(),
+                   tags$div(style = "margin-left: 1em;", "Aleutian Islands"),
+                   tags$div(style = "margin-left: 1em;", "U.S. Eastern Bering Sea Slope"),
+                   tags$div(style = "margin-left: 1em;", "U.S. Eastern Bering Sea Standard Plus NW Region"),
+                   tags$div(style = "margin-left: 1em;", "U.S. Northern Bering Sea"),
+                   tags$br(),
+                   tags$strong("Gulf of Alaska (AFSC):"), tags$br(),
+                   tags$div(style = "margin-left: 1em;", "Gulf of Alaska"),
+                   tags$br(),
+                   tags$strong("Canada (PBS):"), tags$br(),
+                   tags$div(style = "margin-left: 1em;", "SYN HS (Synoptic Hecate Strait)"),
+                   tags$div(style = "margin-left: 1em;", "SYN QCS (Synoptic Queen Charlotte Sound)"),
+                   tags$div(style = "margin-left: 1em;", "SYN WCHG (Synoptic West Coast Vancouver Island)"),
+                   tags$div(style = "margin-left: 1em;", "SYN WCVI (Synoptic West Coast Haida Gwaii)"),
+                   tags$br(),
+                   tags$strong("US West Coast (NWFSC):"), tags$br(),
+                   tags$div(style = "margin-left: 1em;", "U.S. West Coast")
+                 )
+               )
+             )),
     tabPanel("Biomass",
              uiOutput("dbiPlotUI"), #dynamic height
              downloadButton("downloadBiomass", "Download Biomass Plot"),
