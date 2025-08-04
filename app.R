@@ -86,7 +86,8 @@ ui <- page_sidebar(
                card_header("About this tool"),
                card_body(
                    tags$p("Welcome! This interactive app serves as a coastwide synopsis of fisheries in the northeast Pacific Ocean,
-                   providing information on fish biology, density, and biomass. We hope this tool will be used to support monitoring and management of marine ecosystems and resources.")
+                   providing information on fish biology, density, and biomass. We hope this tool will be used by stakeholders at NOAA 
+                   and DFO to support monitoring and management of marine ecosystems and resources.")
                    )
              ),
              card(
@@ -94,9 +95,11 @@ ui <- page_sidebar(
                card_header("Code and Acknowledgements"),
                card_body(
                     tags$p("This app uses plotting functions from the ",
-                    tags$a(href = "https://doi.org/10.5281/zenodo.15932836", "fishyplots", target = "_self"), " package. The code is heavily inspired by the Fisheries and Oceans Canada ",
-                           tags$a(href = "https://publications.gc.ca/site/eng/9.943594/publication.html", " 2023 data report", target = "_self"),
-                           " and builds off an ",
+                    tags$a(href = "https://doi.org/10.5281/zenodo.15932836", "fishyplots", target = "_self"), 
+                    " package, authored by Callie Murakami and Zoe Khan during their 2025 summer internship 
+                    The code is heavily inspired by the Fisheries and Oceans Canada ",
+                    tags$a(href = "https://publications.gc.ca/site/eng/9.943594/publication.html", " 2023 data report", target = "_self"),
+                    " and builds off an ",
                     tags$a(href = "https://github.com/DFO-NOAA-Pacific/gfsynopsis-noaa", "initial version", target = "_self"),
                     " from summer 2024.")
                   ))),
