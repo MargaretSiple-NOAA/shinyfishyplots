@@ -133,7 +133,8 @@ ui <- page_sidebar(
                card_header("Feedback"),
                card_body(
                  tags$p("Have a question or found a bug? Please ", 
-                        tags$a(href ="https://github.com/DFO-NOAA-Pacific/shinyfishyplots/issues", "report here."))
+                        HTML(' <a href = "https://github.com/DFO-NOAA-Pacific/shinyfishyplots/issues" target = "_self" >report here</a>.'),
+                        )
                )
              )),
     tabPanel("Biomass",
@@ -151,9 +152,12 @@ ui <- page_sidebar(
                full_screen = FALSE,
                card_header("Disclaimer"),
                card_body(
-                 tags$p("The spatial distributions shown are derived from generalized linear mixed models (GLMMs) using survey data.  
-                 The maps may not capture true distributions and are subject to assumptions and uncertainties. 
-                They are purely exploratory and should not be used as absolute sources for policy and management decisions.")
+                 tags$p("Maps were made using land data from rnaturalearth ",
+                 HTML(' <a href = "https://doi.org/10.32614/CRAN.package.rnaturalearth" target = "_self" >(Massicotte & South 2025)</a>.'),
+                 "Spatial predictions were generated using a model-based approach applied to the most recent year of survey data with ",
+                 HTML(' <a href = "https://pbs-assess.github.io/sdmTMB/", "sdmTMB", target = "_self" >sdmTMB</a>.'),
+                 "Because of differences in years or model settings, these results may not capture true distributions and may differ from other presentations. 
+                These maps are exploratory and should not be used as definitive sources for management decisions.")
                )
              ),
              uiOutput("dynamicMap"), #dynamic height
