@@ -12,6 +12,7 @@ library(patchwork)
 
 # Load biological data
 data(nwfsc_bio)
+nwfsc_bio <- nwfsc_bio %>%  filter(!common_name == "walleye pollock")
 data(afsc_bio)
 data(pbs_bio)
 akbsai <- afsc_bio |> filter(survey == "AK BSAI")
@@ -63,6 +64,11 @@ ui <- page_sidebar(
       choices = list("All regions", "Aleutians/Bering Sea", "Gulf of Alaska", "Canada", "US West Coast"),
       selected = "All regions"
     ),
+    selectInput(
+      "species",
+      label = "Choose a species",
+      choices = NULL
+    ),
     conditionalPanel( # show when All regions is selected for biomass plots
       condition = "input.region == 'All regions' && input.tabs == 'Biomass'",
       checkboxGroupInput(
@@ -70,12 +76,6 @@ ui <- page_sidebar(
         label = "Select surveys (Biomass only)",
         choices = c("U.S. West Coast", "SYN HS", "SYN QCS", "SYN WCHG", "SYN WCVI", "Gulf of Alaska" = "U.S. Gulf of Alaska", "Aleutian Islands" = "U.S. Aleutian Islands", "Eastern Bering Slope" = "U.S. Eastern Bering Sea Slope", "Eastern Bering and NW" = "U.S. Eastern Bering Sea Standard Plus NW Region", "Northern Bering" = "U.S. Northern Bering Sea")
       )
-    ),
-    
-    selectInput(
-      "species",
-      label = "Choose a species",
-      choices = NULL
     )
   ),
   tabsetPanel(
@@ -102,9 +102,36 @@ ui <- page_sidebar(
                     " and builds off an ",
                     tags$a(href = "https://github.com/DFO-NOAA-Pacific/gfsynopsis-noaa", "initial version", target = "_self"),
                     " from summer 2024.")
-                  ))),
+                  )),
+             card(
+               full_screen = FALSE,
+               card_header("Survey Key"),
+               card_body(
+                 tags$div(
+                   tags$strong("Aleutians/Bering Sea (AFSC):"), tags$br(),
+                   tags$div(style = "margin-left: 1em;", "Aleutian Islands"),
+                   tags$div(style = "margin-left: 1em;", "U.S. Eastern Bering Sea Slope"),
+                   tags$div(style = "margin-left: 1em;", "U.S. Eastern Bering Sea Standard Plus NW Region"),
+                   tags$div(style = "margin-left: 1em;", "U.S. Northern Bering Sea"),
+                   tags$br(),
+                   tags$strong("Gulf of Alaska (AFSC):"), tags$br(),
+                   tags$div(style = "margin-left: 1em;", "Gulf of Alaska"),
+                   tags$br(),
+                   tags$strong("Canada (PBS):"), tags$br(),
+                   tags$div(style = "margin-left: 1em;", "SYN HS (Synoptic Hecate Strait)"),
+                   tags$div(style = "margin-left: 1em;", "SYN QCS (Synoptic Queen Charlotte Sound)"),
+                   tags$div(style = "margin-left: 1em;", "SYN WCHG (Synoptic West Coast Vancouver Island)"),
+                   tags$div(style = "margin-left: 1em;", "SYN WCVI (Synoptic West Coast Haida Gwaii)"),
+                   tags$br(),
+                   tags$strong("US West Coast (NWFSC):"), tags$br(),
+                   tags$div(style = "margin-left: 1em;", "U.S. West Coast")
+                 )
+               )
+             )),
     tabPanel("Biomass",
-             uiOutput("dbiPlotUI")), #dynamic height
+             uiOutput("dbiPlotUI"), #dynamic height
+             downloadButton("downloadBiomass", "Download Biomass Plot"),
+             downloadButton("downloadStanBiomass", "Download Standardized Biomass Plot")), 
     tabPanel("Age and length",
              #plotOutput("agelengthPlot", height = "1000px")),
              uiOutput("dynamic_agelength"),
@@ -121,6 +148,7 @@ ui <- page_sidebar(
     tabPanel("Data",
              div(style = "overflow-x: scroll; min-width: 1200px;",
                  plotOutput("surveytable")),
+             downloadButton("downloadSurveyTable", "Download Survey Plot"),
              tableOutput("demotable"),
              downloadButton("downloadbio", "Download biological data"),
              tableOutput("vbtable"),
@@ -261,19 +289,80 @@ server <- function(input, output, session) {
   })
   
   output$dbiPlot <- renderPlot({
-    req(input$species != c("None selected", ""))
+    validate(
+      need(input$species != "" && input$species != "None selected", "Please select a species."))
+     
+    
   if (input$region == "All regions") {
     req(input$surveys_selected)
   
-    plot_stan_dbi(input$species, input$surveys_selected) # show only standardized plot if All regions selected
+    #create message if there is no DBI data for all selected surveys
+    valid_dbi_surveys <- all.dbi %>% 
+      filter(common_name == input$species, survey %in% input$surveys_selected)
+    valid_dbi_surveys <-  unique(valid_dbi_surveys$survey)
+    invalid_dbi_surveys <- setdiff(input$surveys_selected, valid_dbi_surveys)
+    
+    validate(
+      need(length(valid_dbi_surveys) > 0,
+           paste("No data for", input$species, "in selected surveys"))
+    )
+    
+    # Show a warning notif if some of selected surveys have no data
+    if (length(invalid_dbi_surveys) > 0) {
+      showNotification(
+        paste("No data for", input$species, "in:", paste(invalid_dbi_surveys, collapse = ", ")),
+        type = "warning"
+      )
+    }
+    
+    plot_stan_dbi(input$species, valid_dbi_surveys) # show only standardized plot if All regions selected
+    
+    
+  } else {
+    region_data <- all.dbi %>%
+      filter(common_name == input$species, survey_group == region_names())
+    
+      validate(
+        need(nrow(region_data) > 0,
+             paste("No biomass data for", input$species, "in selected region")))
+    pdbi1 <- plot_dbi(input$species, region_names())
+    pdbi2 <- plot_stan_dbi(input$species, region_names())
+    pdbi1 + pdbi2 + plot_layout(ncol = 1)
+  }
+  })
+  
+  #download plots
+ observe(
+   if (input$region == "All regions") {
+    req(input$surveys_selected)
+    
+    #create message if there is no DBI data for all selected surveys
+    valid_dbi_surveys <- all.dbi %>% 
+      filter(common_name == input$species, survey %in% input$surveys_selected)
+    valid_dbi_surveys <-  unique(valid_dbi_surveys$survey)
+    invalid_dbi_surveys <- setdiff(input$surveys_selected, valid_dbi_surveys)
+    
+    
+    # show only standardized plot if All regions selected
+    output$downloadStanBiomass <- downloadHandler(
+      filename = function() {paste0("stan_biomass_plots_", input$species, ".png")},
+      content = function(file) {ggsave(file, plot =  plot_stan_dbi(input$species, valid_dbi_surveys), width = 10, device = "png")})
+    
     
   } else {
     # show normal and standardized
     pdbi1 <- plot_dbi(input$species, region_names())
     pdbi2 <- plot_stan_dbi(input$species, region_names())
     pdbi1 + pdbi2 + plot_layout(ncol = 1)
-  }
-})
+    
+    output$downloadBiomass <- downloadHandler(
+      filename = function() {paste0("biomass_plot_", input$species,"_", region_names(), ".png")},
+      content = function(file) {ggsave(file, plot =  plot_dbi(input$species, region_names()), width = 10, device = "png")})
+    output$downloadStanBiomass <- downloadHandler(
+      filename = function() {paste0("stan_biomass_plot_", input$species,"_", region_names(), ".png")},
+      content = function(file) {ggsave(file, plot =  plot_stan_dbi(input$species, region_names()), width = 10, device = "png")})
+  })
+  
   
   # Download data tab
   # Survey table
@@ -283,6 +372,11 @@ server <- function(input, output, session) {
   }, height = function() {
     200 * length(region_names()) #dynamically change plot size based on amount
   })
+  observe(
+  output$downloadSurveyTable <- downloadHandler(
+    filename = function() {paste0("SurveyCount_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = survey_table(subset(all_data, survey == region_names()), input$species, form = 2), width = 15, device = "png")})
+  )
   
   # Download biological data
   output$demotable <- renderTable({
