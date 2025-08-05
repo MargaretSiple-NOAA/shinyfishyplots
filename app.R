@@ -127,13 +127,20 @@ ui <- page_sidebar(
                    tags$div(style = "margin-left: 1em;", "U.S. West Coast")
                  )
                )
+             ),
+             card(
+               full_screen = FALSE,
+               card_header("Feedback"),
+               card_body(
+                 tags$p("Have a question or found a bug? Please ", 
+                        tags$a(href ="https://github.com/DFO-NOAA-Pacific/shinyfishyplots/issues", "report here."))
+               )
              )),
     tabPanel("Biomass",
              uiOutput("dbiPlotUI"), #dynamic height
              downloadButton("downloadBiomass", "Download Biomass Plot"),
              downloadButton("downloadStanBiomass", "Download Standardized Biomass Plot")), 
     tabPanel("Age and length",
-             #plotOutput("agelengthPlot", height = "1000px")),
              uiOutput("dynamic_agelength"),
              downloadButton("downloadGrowth", "Download growth plot"),
              downloadButton("downloadLW", "Download length-weight plot"),
@@ -149,8 +156,7 @@ ui <- page_sidebar(
                 They are purely exploratory and should not be used as absolute sources for policy and management decisions.")
                )
              ),
-             #plotOutput("modelPlot", height = map_height1()),
-             uiOutput("dynamicMap"),
+             uiOutput("dynamicMap"), #dynamic height
              downloadButton("downloadMapPlot", "Download map")),
     tabPanel("Depth",
              plotOutput("depthPlot"),
@@ -398,7 +404,7 @@ server <- function(input, output, session) {
   # Download data tab
   # Survey table
   output$surveytable <- renderPlot({
-    req(input$species != c("None selected", ""))
+    req(!(input$species %in% c("None selected", "")))
     survey_table(subset(all_data, survey == region_names()), input$species, form = 2)
   }, height = function() {
     200 * length(region_names()) #dynamically change plot size based on amount
