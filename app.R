@@ -141,7 +141,7 @@ ui <- page_sidebar(
                  )
                )),
              card(full_screen = FALSE,
-                  card_header("Feedback"),
+                  card_header("Citations"),
                   card_body(
                       tags$strong("Aleutians Islands Bottom Trawl Survey"),
                       tags$ul(tags$li("Von Szalay PG, Raring NW, Siple MC, Dowlin AN, Riggle BC, and Laman EA. 2023. Data Report: 2022 Aleutian Islands bottom trawl survey. U.S. Dep. Commer. DOI: 10.25923/85cy-g225.")),
