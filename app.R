@@ -88,8 +88,7 @@ ui <- page_sidebar(
                  tags$p("Welcome! This interactive app serves as a coastwide synopsis of fisheries in the northeast Pacific Ocean,
                    providing information on fish biology, predicted spatial distributions, and biomass. We hope this tool will be used by stakeholders at NOAA 
                    and DFO to support monitoring and management of marine ecosystems and resources.")
-               )
-             ),
+               ) ),
              card(
                full_screen = FALSE,
                card_header("About the Data"),
@@ -141,7 +140,7 @@ ui <- page_sidebar(
                  )
                )),
              card(full_screen = FALSE,
-                  card_header("Feedback"),
+                  card_header("Citations"),
                   card_body(
                       tags$strong("Aleutians Islands Bottom Trawl Survey"),
                       tags$ul(tags$li("Von Szalay PG, Raring NW, Siple MC, Dowlin AN, Riggle BC, and Laman EA. 2023. Data Report: 2022 Aleutian Islands bottom trawl survey. U.S. Dep. Commer. DOI: 10.25923/85cy-g225.")),
@@ -164,8 +163,6 @@ ui <- page_sidebar(
                       tags$strong("USA West Coast Bottom Trawl Surveys"), 
                       tags$ul(
                         tags$li("Keller AA, Wallace JR, Methot RD. 2017. The Northwest Fisheries Science Center’s West Coast Groundfish Bottom Trawl Survey: history, design, and description. DOI: 10.7289/V5/TM-NWFSC-136."))
-               
-                  
                   ))
              ),
     
