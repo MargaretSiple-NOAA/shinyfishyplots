@@ -86,7 +86,7 @@ ui <- page_sidebar(
                card_header("About this tool"),
                card_body(
                    tags$p("Welcome! This interactive app serves as a coastwide synopsis of fisheries in the northeast Pacific Ocean,
-                   providing information on fish biology, density, and biomass. We hope this tool will be used by stakeholders at NOAA 
+                   providing information on fish biology, predicted spatial distributions, and biomass. We hope this tool will be used by stakeholders at NOAA 
                    and DFO to support monitoring and management of marine ecosystems and resources.")
                    )
              ),
@@ -96,7 +96,7 @@ ui <- page_sidebar(
                card_body(
                     tags$p("This app uses plotting functions from the ",
                     tags$a(href = "https://doi.org/10.5281/zenodo.15932836", "fishyplots", target = "_self"), 
-                    " package, authored by Callie Murakami and Zoe Khan during their 2025 summer internship 
+                    " package, authored by Callie Murakami and Zoe Khan during their 2025 summer internship. 
                     The code is heavily inspired by the Fisheries and Oceans Canada ",
                     tags$a(href = "https://publications.gc.ca/site/eng/9.943594/publication.html", " 2023 data report", target = "_self"),
                     " and builds off an ",
@@ -140,7 +140,17 @@ ui <- page_sidebar(
              downloadButton("downloadAgeFreq", "Download age frequency plot"),
              downloadButton("downloadLengthFreq", "Download length frequency plot")),
     tabPanel("Maps",
-             plotOutput("modelPlot", height = "1200px"),
+             card(
+               full_screen = FALSE,
+               card_header("Disclaimer"),
+               card_body(
+                 tags$p("The spatial distributions shown are derived from generalized linear mixed models (GLMMs) using survey data.  
+                 The maps may not capture true distributions and are subject to assumptions and uncertainties. 
+                They are purely exploratory and should not be used as absolute sources for policy and management decisions.")
+               )
+             ),
+             #plotOutput("modelPlot", height = map_height1()),
+             uiOutput("dynamicMap"),
              downloadButton("downloadMapPlot", "Download map")),
     tabPanel("Depth",
              plotOutput("depthPlot"),
@@ -211,21 +221,42 @@ server <- function(input, output, session) {
   })
   
   # Map plots
+  map_height1 <- reactive({
+    if (setequal(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) {
+      "1800px"
+    } else if (region_names() %in% c("AK BSAI", "AK GULF")) {
+      "450px"
+    } else if (region_names() == "NWFSC") {
+      "800px"
+    } else if (region_names() == "PBS") {
+      "600px"
+    }
+  })
+  
+  output$dynamicMap <- renderUI({
+    req(input$species != "None selected")
+    plotOutput("modelPlot", height = map_height1())
+    })
+  
   output$modelPlot <- renderPlot({
     req(input$species != "None selected")
     fishmap(predictions, region_names(), input$species)})
   
-  map_height <- reactive({
+  map_height2 <- reactive({
     if (setequal(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) {
-      1600 / 96
-    } else {
+      1800 / 96
+    } else if (region_names() %in% c("AK BSAI", "AK GULF")) {
+      450 / 96
+    } else if (region_names() == "NWFSC") {
       800 / 96
+    } else if (region_names() == "PBS") {
+      600 / 96
     }
   })
   
   output$downloadMapPlot <- downloadHandler(
     filename = function() {paste0("map_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = fishmap(predictions, region_names(), input$species), height = map_height(), device = "png")})
+    content = function(file) {ggsave(file, plot = fishmap(predictions, region_names(), input$species), height = map_height2(), device = "png")})
   
   # Length, age, growth plots 
   output$dynamic_agelength <- renderUI({
