@@ -91,11 +91,13 @@ ui <- page_sidebar(
                ) ),
              card(
                full_screen = FALSE,
-               card_header("About the Data"),
+               card_header("About the data"),
                card_body(
-                 tags$p("Data used in this tool comes from trawl surveys conducted by NOAA's Alaska Fisheries Science Center (AFSC) and Northwest Fisheries Science Center (NWFSC), and Fisheries and Oceans Canada's Pacific Biological Station (PBS). For each survey region (U.S. West Coast, British Columbia, Alaska), we identified the top 20 species with respect to total biomass in all survey years. We also added the top 20 species that have been ranked as occurring in multiple areas, as part of the ",
-                      tags$a(href = "https://doi.org/10.5281/zenodo.10031852", "'surveyjoin' package", target = "_self"), 
-                 ". See citations more information on the surveys and data collection."),
+                 tags$p("Our data comes from trawl surveys conducted by NOAA's Alaska Fisheries Science Center (AFSC) and Northwest Fisheries Science Center (NWFSC), and Fisheries and Oceans Canada's Pacific Biological Station (PBS). 
+                        For each survey region (U.S. West Coast, British Columbia, Alaska), we identified the top 20 species with respect to total biomass in all survey years. 
+                        We also added the top 20 species that have been ranked as occurring in multiple areas, as part of the ",
+                        HTML(' <a href = "https://doi.org/10.5281/zenodo.10031852" target = "_self" >surveyjoin</a> package.'),
+                 "See citations for more information on the surveys and data collection."),
                  tags$b(tags$u("Regions and Associated Surveys")),
                  tags$div(
                    tags$strong("Aleutians/Bering Sea (AFSC):"), tags$br(),
