@@ -198,6 +198,7 @@ ui <- page_sidebar(
              div(style = "overflow-x: scroll; min-width: 1200px;",
                  plotOutput("surveytable")),
              downloadButton("downloadSurveyTable", "Download Survey Plot"),
+             downloadButton("downloadSurveyTibble", "Download Survey Plot Data (Unrounded)"),
              tableOutput("demotable"),
              downloadButton("downloadbio", "Download biological data"),
              tableOutput("vbtable"),
@@ -442,10 +443,13 @@ server <- function(input, output, session) {
   }, height = function() {
     200 * length(region_names()) #dynamically change plot size based on amount
   })
-  observe(
+  observeEvent(
   output$downloadSurveyTable <- downloadHandler(
     filename = function() {paste0("SurveyCount_plot_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = survey_table(subset(all_data, survey == region_names()), input$species, form = 2), width = 15, device = "png")})
+    content = function(file) {ggsave(file, plot = survey_table(subset(all_data, survey == region_names()), input$species, form = 2), width = 15, device = "png")}),
+  output$downloadSurveyTibble <-  downloadHandler(
+    filename = function() {paste0("SurveyCount_table_", input$species, ".csv")},
+    content = function(file) {write.csv(survey_table(subset(all_data, survey == region_names()), input$species, form = 1), file)})
   )
   
   # Download biological data
