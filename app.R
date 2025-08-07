@@ -194,8 +194,10 @@ ui <- page_sidebar(
              uiOutput("dynamicMap"), #dynamic height
              downloadButton("downloadMapPlot", "Download map")),
     tabPanel("Depth",
-             plotOutput("depthPlot"),
-             downloadButton("downloadDepthPlot", "Download depth plot")),
+             plotOutput("age_depthPlot"),
+             plotOutput("length_depthPlot"),
+             downloadButton("downloadAgeDepthPlot", "Download age-depth plot"),
+             downloadButton("downloadLengthDepthPlot", "Download length-depth plot")),
     tabPanel("Data",
              div(style = "overflow-x: scroll; min-width: 1200px;",
                  plotOutput("surveytable")),
@@ -343,13 +345,21 @@ server <- function(input, output, session) {
     content = function(file) {ggsave(file, plot = length_frequency(all_data, region_names(), input$species, time_series = TRUE), width = plot_width(), device = "png")})
   
   # Depth plot
-  output$depthPlot <- renderPlot({
+  output$age_depthPlot <- renderPlot({
     req(input$species != "None selected")
-    depth_plot(all_data, region_names(), input$species)})
+    plot_age_depth(all_data, region_names(), input$species)})
   
-  output$downloadDepthPlot <- downloadHandler(
-    filename = function() {paste0("depth_plot_", input$species, ".png")},
+  output$length_depthPlot <- renderPlot({
+    req(input$species != "None selected")
+    plot_length_depth(all_data, region_names(), input$species)})
+  
+  output$downloadAgeDepthPlot <- downloadHandler(
+    filename = function() {paste0("age_depth_plot_", input$species, ".png")},
     content = function(file) {ggsave(file, plot = depth_plot(all_data, region_names(), input$species), width = plot_width(), device = "png")})
+  
+  output$downloadLengthDepthPlot <- downloadHandler(
+    filename = function() {paste0("length_depth_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = plot_length_depth(all_data, region_names(), input$species), width = plot_width(), device = "png")})
   
   # DBI Biomass plots
   output$dbiPlotUI <- renderUI({
