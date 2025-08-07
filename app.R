@@ -176,6 +176,7 @@ ui <- page_sidebar(
              uiOutput("dynamic_agelength"),
              downloadButton("downloadGrowth", "Download growth plot"),
              downloadButton("downloadLW", "Download length-weight plot"),
+             downloadButton("downloadLTS", "Download average lengths plot"),
              downloadButton("downloadAgeFreq", "Download age frequency plot"),
              downloadButton("downloadLengthFreq", "Download length frequency plot")),
     tabPanel("Maps",
@@ -304,8 +305,8 @@ server <- function(input, output, session) {
   
   # Length, age, growth plots 
   output$dynamic_agelength <- renderUI({
-    width <- if (identical(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) "100%" else "80%"
-    plotOutput("agelengthPlot", width = width, height = "1000px")})
+    width <- if (identical(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) "100%" else "65%"
+    plotOutput("agelengthPlot", width = width, height = "1250px")})
   
   output$agelengthPlot <- renderPlot({
     req(input$species != c("None selected", ""))
@@ -313,12 +314,14 @@ server <- function(input, output, session) {
     p1 <- plot_growth(all_data, vb_predictions, region_names(), input$species) 
     # Length - weight
     p2 <- length_weight(subset(all_data, survey %in% region_names()), input$species, subset = TRUE)
+    # Average Lengths
+    p3 <- length_ts(subset(all_data, survey %in% region_names()), input$species)
     # Age frequency
-    p3 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
+    p4 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
     # Length frequency
-    p4 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
+    p5 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
     # Combine with patchwork
-    p1 + p2 + p3 + p4 + plot_layout(ncol = 1, heights = c(1, 1, 1.5, 1))
+    p1 + p2 + p3 + p4 + p5 + plot_layout(ncol = 1, heights = c(1, 1, 1, 1.5, 1))
   })
   
   plot_width <- reactive({
@@ -336,6 +339,10 @@ server <- function(input, output, session) {
   output$downloadLW <- downloadHandler(
     filename = function() {paste0("lw_plot_", input$species, ".png")},
     content = function(file) {ggsave(file, plot = length_weight(subset(all_data, survey %in% region_names()), input$species, subset = TRUE), width = plot_width(), device = "png")})
+  
+  output$downloadLTS <- downloadHandler(
+    filename = function() {paste0("avglengths_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = length_ts(subset(all_data, survey %in% region_names()), input$species), width = plot_width(), device = "png")})
   
   output$downloadAgeFreq <- downloadHandler(
     filename = function() {paste0("agefrequency_plot_", input$species, ".png")},
