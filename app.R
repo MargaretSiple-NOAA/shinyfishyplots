@@ -91,11 +91,13 @@ ui <- page_sidebar(
                ) ),
              card(
                full_screen = FALSE,
-               card_header("About the Data"),
+               card_header("About the data"),
                card_body(
-                 tags$p("Data used in this tool comes from trawl surveys conducted by NOAA's Alaska Fisheries Science Center (AFSC) and Northwest Fisheries Science Center (NWFSC), and Fisheries and Oceans Canada's Pacific Biological Station (PBS). For each survey region (U.S. West Coast, British Columbia, Alaska), we identified the top 20 species with respect to total biomass in all survey years. We also added the top 20 species that have been ranked as occurring in multiple areas, as part of the ",
-                      tags$a(href = "https://doi.org/10.5281/zenodo.10031852", "'surveyjoin' package", target = "_self"), 
-                 ". See citations more information on the surveys and data collection."),
+                 tags$p("Our data comes from trawl surveys conducted by NOAA's Alaska Fisheries Science Center (AFSC) and Northwest Fisheries Science Center (NWFSC), and Fisheries and Oceans Canada's Pacific Biological Station (PBS). 
+                        For each survey region (U.S. West Coast, British Columbia, Alaska), we identified the top 20 species with respect to total biomass in all survey years. 
+                        We also added the top 20 species that have been ranked as occurring in multiple areas, as part of the ",
+                        HTML(' <a href = "https://doi.org/10.5281/zenodo.10031852" target = "_self" >surveyjoin</a> package.'),
+                 "See citations for more information on the surveys and data collection."),
                  tags$b(tags$u("Regions and Associated Surveys")),
                  tags$div(
                    tags$strong("Aleutians/Bering Sea (AFSC):"), tags$br(),
@@ -192,8 +194,10 @@ ui <- page_sidebar(
              uiOutput("dynamicMap"), #dynamic height
              downloadButton("downloadMapPlot", "Download map")),
     tabPanel("Depth",
-             plotOutput("depthPlot"),
-             downloadButton("downloadDepthPlot", "Download depth plot")),
+             plotOutput("age_depthPlot"),
+             plotOutput("length_depthPlot"),
+             downloadButton("downloadAgeDepthPlot", "Download age-depth plot"),
+             downloadButton("downloadLengthDepthPlot", "Download length-depth plot")),
     tabPanel("Data",
              div(style = "overflow-x: scroll; min-width: 1200px;",
                  plotOutput("surveytable")),
@@ -342,13 +346,21 @@ server <- function(input, output, session) {
     content = function(file) {ggsave(file, plot = length_frequency(all_data, region_names(), input$species, time_series = TRUE), width = plot_width(), device = "png")})
   
   # Depth plot
-  output$depthPlot <- renderPlot({
+  output$age_depthPlot <- renderPlot({
     req(input$species != "None selected")
-    depth_plot(all_data, region_names(), input$species)})
+    plot_age_depth(all_data, region_names(), input$species)})
   
-  output$downloadDepthPlot <- downloadHandler(
-    filename = function() {paste0("depth_plot_", input$species, ".png")},
+  output$length_depthPlot <- renderPlot({
+    req(input$species != "None selected")
+    plot_length_depth(all_data, region_names(), input$species)})
+  
+  output$downloadAgeDepthPlot <- downloadHandler(
+    filename = function() {paste0("age_depth_plot_", input$species, ".png")},
     content = function(file) {ggsave(file, plot = depth_plot(all_data, region_names(), input$species), width = plot_width(), device = "png")})
+  
+  output$downloadLengthDepthPlot <- downloadHandler(
+    filename = function() {paste0("length_depth_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = plot_length_depth(all_data, region_names(), input$species), width = plot_width(), device = "png")})
   
   # DBI Biomass plots
   output$dbiPlotUI <- renderUI({
