@@ -194,8 +194,7 @@ ui <- page_sidebar(
              uiOutput("dynamicMap"), #dynamic height
              downloadButton("downloadMapPlot", "Download map")),
     tabPanel("Depth",
-             plotOutput("age_depthPlot"),
-             plotOutput("length_depthPlot"),
+             uiOutput("dynamic_depth"),
              downloadButton("downloadAgeDepthPlot", "Download age-depth plot"),
              downloadButton("downloadLengthDepthPlot", "Download length-depth plot")),
     tabPanel("Data",
@@ -345,6 +344,11 @@ server <- function(input, output, session) {
     content = function(file) {ggsave(file, plot = length_frequency(all_data, region_names(), input$species, time_series = TRUE), width = plot_width(), device = "png")})
   
   # Depth plot
+  output$dynamic_depth <- renderUI({
+    width <- if (identical(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) "100%" else "80%"
+    tagList(plotOutput("age_depthPlot", width = width, height = "600px"),
+    plotOutput("length_depthPlot", width = width, height = "600px")) })
+  
   output$age_depthPlot <- renderPlot({
     req(input$species != "None selected")
     plot_age_depth(all_data, region_names(), input$species)})
@@ -355,7 +359,7 @@ server <- function(input, output, session) {
   
   output$downloadAgeDepthPlot <- downloadHandler(
     filename = function() {paste0("age_depth_plot_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = depth_plot(all_data, region_names(), input$species), width = plot_width(), device = "png")})
+    content = function(file) {ggsave(file, plot = plot_age_depth(all_data, region_names(), input$species), width = plot_width(), device = "png")})
   
   output$downloadLengthDepthPlot <- downloadHandler(
     filename = function() {paste0("length_depth_plot_", input$species, ".png")},
