@@ -176,6 +176,7 @@ ui <- page_sidebar(
              uiOutput("dynamic_agelength"),
              downloadButton("downloadGrowth", "Download growth plot"),
              downloadButton("downloadLW", "Download length-weight plot"),
+             downloadButton("downloadLTS", "Download average lengths plot"),
              downloadButton("downloadAgeFreq", "Download age frequency plot"),
              downloadButton("downloadLengthFreq", "Download length frequency plot")),
     tabPanel("Maps",
@@ -194,12 +195,15 @@ ui <- page_sidebar(
              uiOutput("dynamicMap"), #dynamic height
              downloadButton("downloadMapPlot", "Download map")),
     tabPanel("Depth",
-             plotOutput("depthPlot"),
-             downloadButton("downloadDepthPlot", "Download depth plot")),
+             plotOutput("age_depthPlot"),
+             plotOutput("length_depthPlot"),
+             downloadButton("downloadAgeDepthPlot", "Download age-depth plot"),
+             downloadButton("downloadLengthDepthPlot", "Download length-depth plot")),
     tabPanel("Data",
              div(style = "overflow-x: scroll; min-width: 1200px;",
                  plotOutput("surveytable")),
              downloadButton("downloadSurveyTable", "Download Survey Plot"),
+             downloadButton("downloadSurveyTibble", "Download Survey Plot Data (Unrounded)"),
              tableOutput("demotable"),
              downloadButton("downloadbio", "Download biological data"),
              tableOutput("vbtable"),
@@ -301,8 +305,8 @@ server <- function(input, output, session) {
   
   # Length, age, growth plots 
   output$dynamic_agelength <- renderUI({
-    width <- if (identical(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) "100%" else "80%"
-    plotOutput("agelengthPlot", width = width, height = "1000px")})
+    width <- if (identical(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) "100%" else "65%"
+    plotOutput("agelengthPlot", width = width, height = "1250px")})
   
   output$agelengthPlot <- renderPlot({
     req(input$species != c("None selected", ""))
@@ -310,12 +314,14 @@ server <- function(input, output, session) {
     p1 <- plot_growth(all_data, vb_predictions, region_names(), input$species) 
     # Length - weight
     p2 <- length_weight(subset(all_data, survey %in% region_names()), input$species, subset = TRUE)
+    # Average Lengths
+    p3 <- length_ts(subset(all_data, survey %in% region_names()), input$species)
     # Age frequency
-    p3 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
+    p4 <- age_frequency(all_data, region_names(), input$species, cutoff = 0.75)
     # Length frequency
-    p4 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
+    p5 <- length_frequency(all_data, region_names(), input$species, time_series = TRUE)
     # Combine with patchwork
-    p1 + p2 + p3 + p4 + plot_layout(ncol = 1, heights = c(1, 1, 1.5, 1))
+    p1 + p2 + p3 + p4 + p5 + plot_layout(ncol = 1, heights = c(1, 1, 1, 1.5, 1))
   })
   
   plot_width <- reactive({
@@ -334,6 +340,10 @@ server <- function(input, output, session) {
     filename = function() {paste0("lw_plot_", input$species, ".png")},
     content = function(file) {ggsave(file, plot = length_weight(subset(all_data, survey %in% region_names()), input$species, subset = TRUE), width = plot_width(), device = "png")})
   
+  output$downloadLTS <- downloadHandler(
+    filename = function() {paste0("avglengths_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = length_ts(subset(all_data, survey %in% region_names()), input$species), width = plot_width(), device = "png")})
+  
   output$downloadAgeFreq <- downloadHandler(
     filename = function() {paste0("agefrequency_plot_", input$species, ".png")},
     content = function(file) {ggsave(file, plot = age_frequency(all_data, region_names(), input$species, cutoff = 0.75), width = plot_width(), device = "png")})
@@ -343,13 +353,21 @@ server <- function(input, output, session) {
     content = function(file) {ggsave(file, plot = length_frequency(all_data, region_names(), input$species, time_series = TRUE), width = plot_width(), device = "png")})
   
   # Depth plot
-  output$depthPlot <- renderPlot({
+  output$age_depthPlot <- renderPlot({
     req(input$species != "None selected")
-    depth_plot(all_data, region_names(), input$species)})
+    plot_age_depth(all_data, region_names(), input$species)})
   
-  output$downloadDepthPlot <- downloadHandler(
-    filename = function() {paste0("depth_plot_", input$species, ".png")},
+  output$length_depthPlot <- renderPlot({
+    req(input$species != "None selected")
+    plot_length_depth(all_data, region_names(), input$species)})
+  
+  output$downloadAgeDepthPlot <- downloadHandler(
+    filename = function() {paste0("age_depth_plot_", input$species, ".png")},
     content = function(file) {ggsave(file, plot = depth_plot(all_data, region_names(), input$species), width = plot_width(), device = "png")})
+  
+  output$downloadLengthDepthPlot <- downloadHandler(
+    filename = function() {paste0("length_depth_plot_", input$species, ".png")},
+    content = function(file) {ggsave(file, plot = plot_length_depth(all_data, region_names(), input$species), width = plot_width(), device = "png")})
   
   # DBI Biomass plots
   output$dbiPlotUI <- renderUI({
@@ -444,10 +462,13 @@ server <- function(input, output, session) {
   }, height = function() {
     200 * length(region_names()) #dynamically change plot size based on amount
   })
-  observe(
+  observeEvent(
   output$downloadSurveyTable <- downloadHandler(
     filename = function() {paste0("SurveyCount_plot_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = survey_table(subset(all_data, survey == region_names()), input$species, form = 2), width = 15, device = "png")})
+    content = function(file) {ggsave(file, plot = survey_table(subset(all_data, survey == region_names()), input$species, form = 2), width = 15, device = "png")}),
+  output$downloadSurveyTibble <-  downloadHandler(
+    filename = function() {paste0("SurveyCount_table_", input$species, ".csv")},
+    content = function(file) {write.csv(survey_table(subset(all_data, survey == region_names()), input$species, form = 1), file)})
   )
   
   # Download biological data
