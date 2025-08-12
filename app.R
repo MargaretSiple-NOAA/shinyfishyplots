@@ -169,6 +169,16 @@ ui <- page_sidebar(
              ),
     
     tabPanel("Biomass",
+             conditionalPanel( #only show card whe  all regions selected
+               condition = "input.region == 'All regions'",
+             card(
+               full_screen = FALSE,
+               card_header("Design-Based Biomass Indicies"),
+               card_body(
+                 tags$p("When", 
+                 tags$strong("'All Regions'"),
+                 " is selected, only standardized biomass indicies are shown and can be viewed for multiple survey areas. See 'About the Data' in the 'Home' tab for more information on these survey areas." )
+               ) )),
              uiOutput("dbiPlotUI"), #dynamic height
              downloadButton("downloadBiomass", "Download Biomass Plot"),
              downloadButton("downloadStanBiomass", "Download Standardized Biomass Plot")), 
@@ -202,7 +212,7 @@ ui <- page_sidebar(
              div(style = "overflow-x: scroll; min-width: 1200px;",
                  plotOutput("surveytable")),
              downloadButton("downloadSurveyTable", "Download Survey Plot"),
-             downloadButton("downloadSurveyTibble", "Download Survey Plot Data (Unrounded)"),
+             downloadButton("downloadSurveyTibble", "Download Survey Plot Data (Unrounded Counts)"),
              tableOutput("demotable"),
              downloadButton("downloadbio", "Download biological data"),
              tableOutput("vbtable"),
@@ -462,8 +472,8 @@ server <- function(input, output, session) {
   # Survey table
   output$surveytable <- renderPlot({
     req(!(input$species %in% c("None selected", "")))
-    survey_table(subset(all_data, survey == region_names()), input$species, form = 2)
-  }, height = function() {
+    survey_table(all_data %>% filter(survey %in% region_names()), input$species, form = 2)
+  }, width = 1500,  height = function() {
     200 * length(region_names()) #dynamically change plot size based on amount
   })
   observeEvent(
