@@ -171,6 +171,16 @@ ui <- page_sidebar(
              ),
     
     tabPanel("Biomass",
+             conditionalPanel( #only show card whe  all regions selected
+               condition = "input.region == 'All regions'",
+             card(
+               full_screen = FALSE,
+               card_header("Design-Based Biomass Indicies"),
+               card_body(
+                 tags$p("When", 
+                 tags$strong("'All Regions'"),
+                 " is selected, only standardized biomass indicies are shown and can be viewed for multiple survey areas. See 'About the Data' in the 'Home' tab for more information on these survey areas." )
+               ) )),
              uiOutput("dbiPlotUI"), #dynamic height
              downloadButton("downloadBiomass", "Download Biomass Plot"),
              downloadButton("downloadStanBiomass", "Download Standardized Biomass Plot")), 
@@ -197,15 +207,14 @@ ui <- page_sidebar(
              uiOutput("dynamicMap"), #dynamic height
              downloadButton("downloadMapPlot", "Download map")),
     tabPanel("Depth",
-             plotOutput("age_depthPlot"),
-             plotOutput("length_depthPlot"),
+             uiOutput("dynamic_depth"),
              downloadButton("downloadAgeDepthPlot", "Download age-depth plot"),
              downloadButton("downloadLengthDepthPlot", "Download length-depth plot")),
     tabPanel("Data",
              div(style = "overflow-x: scroll; min-width: 1200px;",
                  plotOutput("surveytable")),
              downloadButton("downloadSurveyTable", "Download Survey Plot"),
-             downloadButton("downloadSurveyTibble", "Download Survey Plot Data (Unrounded)"),
+             downloadButton("downloadSurveyTibble", "Download Survey Plot Data (Unrounded Counts)"),
              tableOutput("demotable"),
              downloadButton("downloadbio", "Download biological data"),
              tableOutput("vbtable"),
@@ -355,6 +364,11 @@ server <- function(input, output, session) {
     content = function(file) {ggsave(file, plot = length_frequency(all_data, region_names(), input$species, time_series = TRUE), width = plot_width(), device = "png")})
   
   # Depth plot
+  output$dynamic_depth <- renderUI({
+    width <- if (identical(region_names(), c("AK BSAI", "AK GULF", "PBS", "NWFSC"))) "100%" else "80%"
+    tagList(plotOutput("age_depthPlot", width = width, height = "600px"),
+    plotOutput("length_depthPlot", width = width, height = "600px")) })
+  
   output$age_depthPlot <- renderPlot({
     req(input$species != "None selected")
     plot_age_depth(all_data, region_names(), input$species)})
@@ -365,7 +379,7 @@ server <- function(input, output, session) {
   
   output$downloadAgeDepthPlot <- downloadHandler(
     filename = function() {paste0("age_depth_plot_", input$species, ".png")},
-    content = function(file) {ggsave(file, plot = depth_plot(all_data, region_names(), input$species), width = plot_width(), device = "png")})
+    content = function(file) {ggsave(file, plot = plot_age_depth(all_data, region_names(), input$species), width = plot_width(), device = "png")})
   
   output$downloadLengthDepthPlot <- downloadHandler(
     filename = function() {paste0("length_depth_plot_", input$species, ".png")},
@@ -460,8 +474,8 @@ server <- function(input, output, session) {
   # Survey table
   output$surveytable <- renderPlot({
     req(!(input$species %in% c("None selected", "")))
-    survey_table(subset(all_data, survey == region_names()), input$species, form = 2)
-  }, height = function() {
+    survey_table(all_data %>% filter(survey %in% region_names()), input$species, form = 2)
+  }, width = 1500,  height = function() {
     200 * length(region_names()) #dynamically change plot size based on amount
   })
   observeEvent(
