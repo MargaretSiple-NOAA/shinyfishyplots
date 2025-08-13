@@ -1,6 +1,8 @@
 # Load packages
 library(shiny)
 library(bslib)
+library(rnaturalearthhires)
+library(rnaturalearthdata)
 library(surveyjoin)
 library(sdmTMB)
 library(fishyplots) #devtools::install_github("DFO-NOAA-Pacific/fishyplots")
@@ -12,7 +14,7 @@ library(patchwork)
 
 # Load biological data
 data(nwfsc_bio)
-nwfsc_bio <- nwfsc_bio %>%  filter(!common_name == "walleye pollock")
+nwfsc_bio <- nwfsc_bio  %>%  filter(!common_name == "walleye pollock")
 data(afsc_bio)
 data(pbs_bio)
 akbsai <- afsc_bio |> filter(survey == "AK BSAI")
